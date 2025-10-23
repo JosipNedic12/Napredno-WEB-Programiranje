@@ -1,19 +1,19 @@
 <?php
 interface iRadovi {
-    public function create(array $items): void;     // napuni kolekciju radova iz dobivenih podataka
-    public function save(PDO $pdo): void;           // spremi sve u bazu
-    public function read(PDO $pdo): array;          // vrati sve iz baze
+    public function create(array $items): void;     
+    public function save(PDO $pdo): void;           
+    public function read(PDO $pdo): array;          
 }
 
 final class DiplomskiRadovi implements iRadovi
 {
-    // Jedan rad
+    
     public string $naziv_rada;
     public ?string $tekst_rada;
     public string $link_rada;
     public ?string $oib_tvrtke;
 
-    // Kolekcija radova
+    
     private array $radovi = [];
 
     public function __construct(
@@ -28,7 +28,7 @@ final class DiplomskiRadovi implements iRadovi
         $this->oib_tvrtke = $oib_tvrtke;
     }
 
-    // Napuni kolekciju radova
+    
     public function create(array $items): void
     {
         foreach ($items as $it) {
@@ -41,7 +41,7 @@ final class DiplomskiRadovi implements iRadovi
         }
     }
 
-    // Spremi kolekciju u bazu
+    
     public function save(PDO $pdo): void
     {
         $sql = "INSERT INTO diplomski_radovi (naziv_rada, tekst_rada, link_rada, oib_tvrtke)
@@ -62,7 +62,7 @@ final class DiplomskiRadovi implements iRadovi
         }
     }
 
-    // Dohvati sve iz baze
+    
     public function read(PDO $pdo): array
     {
         $sql = "SELECT id, naziv_rada, tekst_rada, link_rada, oib_tvrtke, created_at
@@ -72,16 +72,57 @@ final class DiplomskiRadovi implements iRadovi
     }
 }
 
-// -------------------- Helperi za dohvat i parsiranje --------------------
+function envv(string $key, ?string $default = null): ?string {
+    // redoslijed: $_ENV → $_SERVER → getenv → default
+    $v = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+    return ($v === false || $v === null || $v === '') ? $default : $v;
+}
+
+function load_dotenv(string $path): void {
+    if (!is_file($path)) return;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+
+        // podrži export KEY=VAL i komentare na kraju linije
+        if (str_starts_with($line, 'export ')) $line = trim(substr($line, 7));
+        $parts = explode('=', $line, 2);
+        if (count($parts) !== 2) continue;
+
+        [$k, $v] = array_map('trim', $parts);
+
+        // ukloni inline komentare koji počinju # izvan navodnika
+        if ($v !== '' && $v[0] !== '"' && $v[0] !== "'") {
+            $v = preg_split('/\s+#/', $v, 2)[0];
+        } else {
+            $v = trim($v, "\"'");
+        }
+
+        // handle escaped newlines \n -> stvarni novi red
+        $v = str_replace(['\\n', '\\r'], ["\n", "\r"], $v);
+
+        // set u env
+        $_ENV[$k] = $_SERVER[$k] = $v;
+        putenv("$k=$v");
+    }
+}
+
+load_dotenv(__DIR__ . '/.env');
 
 function make_pdo(): PDO {
-    $host = '127.0.0.1';
-    $db   = 'radovi';
-    $user = 'root';
-    $pass = 'Lionel#123';
-    $charset = 'utf8mb4';
+    $host = envv('DB_HOST', '127.0.0.1');
+    $db   = envv('DB_NAME', 'radovi');
+    $user = envv('DB_USER', 'root');
+    $pass = envv('DB_PASS', '');
+    $charset = envv('DB_CHARSET', 'utf8mb4');
+    $port = (int)envv('DB_PORT', '3306');
 
-    $dsn = "mysql:host={$host};dbname={$db};charset={$charset}";
+    // sigurnosna provjera u produkciji
+    if (envv('APP_ENV') === 'production' && $pass === '') {
+        throw new RuntimeException('DB_PASS is empty in production');
+    }
+
+    $dsn = "mysql:host={$host};port={$port};dbname={$db};charset={$charset}";
     $opt = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -95,7 +136,7 @@ function normalize_url(string $href): string {
     if ($href === '') return '';
     return 'https://stup.ferit.hr' . (str_starts_with($href,'/') ? '' : '/') . $href;
 }
-// Iz liste rada izdvoji: naziv, link, OIB (ako postoji)
+
 function parse_list_items(string $html): array {
     $items = [];
     libxml_use_internal_errors(true);
@@ -103,16 +144,16 @@ function parse_list_items(string $html): array {
     $dom->loadHTML($html);
     $xp = new DOMXPath($dom);
 
-    // svi članci s id="blog-1-post-XXXXX"
+    
     $articles = $xp->query("//*[starts-with(@id,'blog-1-post-')]");
     foreach ($articles as $art) {
-        // naslov i link
+        
         $a = (new DOMXPath($art->ownerDocument))->query(".//div[2]//h2/a", $art)->item(0);
         if (!$a) continue;
         $title = trim(preg_replace('/\s+/', ' ', $a->textContent));
         $href  = normalize_url($a->getAttribute('href'));
 
-        // opis (spoji sve p tekstove)
+        
         $descNodes = (new DOMXPath($art->ownerDocument))->query(".//div[2]//div/p", $art);
         $descParts = [];
         foreach ($descNodes as $p) {
@@ -120,7 +161,6 @@ function parse_list_items(string $html): array {
         }
         $opis = trim(implode(' ', array_filter($descParts)));
 
-        // slika -> src -> OIB (11 znamenki u nazivu datoteke)
         $img = (new DOMXPath($art->ownerDocument))->query(".//div[1]//ul[1]//img", $art)->item(0);
         $oib = null;
         if ($img) {
@@ -169,7 +209,6 @@ function curl_get(string $url): string {
 }
 
 
-// Sa stranice detalja rada dohvatiti tekst rada (excerpt/sadržaj)
 function fetch_text_from_detail(string $detailUrl): ?string {
     try {
         $html = curl_get($detailUrl);
@@ -182,7 +221,6 @@ function fetch_text_from_detail(string $detailUrl): ?string {
     $dom->loadHTML($html);
     $xpath = new DOMXPath($dom);
 
-    // Pokušaj dohvatiti glavni sadržaj članka
     $cands = [
         "//div[contains(@class,'entry-content')]",
         "//article//div[contains(@class,'content')]",
@@ -199,7 +237,7 @@ function fetch_text_from_detail(string $detailUrl): ?string {
         }
     }
 
-    // Fallback: cijeli vidljivi tekst stranice
+    
     $fallback = trim(preg_replace('/\s+/', ' ', $dom->textContent));
     return $fallback ? mb_substr($fallback, 0, 2000) : null;
 }
@@ -209,18 +247,17 @@ function paged_url(int $page): string {
         : "https://stup.ferit.hr/zavrsni-radovi/page/{$page}/";
 }
 
-// Orkestracija: scrapa stranice 2..6, parsira listu, obogati tekstom detalja
 function scrape_radovi(): array {
     $all = [];
     for ($page = 1; $page <= 6; $page++) {
         $url = paged_url($page);
         $html = curl_get($url);
         $items = parse_list_items($html);
-        // stani kad više nema rezultata
+        
         if (count($items) === 0) break;
         $all = array_merge($all, $items);
     }
-    // deduplikacija po linku
+    
     $seen = [];
     $out = [];
     foreach ($all as $it) {
@@ -233,7 +270,7 @@ function scrape_radovi(): array {
 }
 
 
-// -------------------- CLI/Web izvršavanje --------------------
+
 
 if (php_sapi_name() === 'cli-server' || php_sapi_name() === 'cli' || isset($_GET['run'])) {
     try {

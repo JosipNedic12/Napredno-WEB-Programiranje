@@ -121,7 +121,7 @@
 
     const ENDPOINT = new URL('index.php?run=1', location.href).toString();
 
-    // Paging u browseru (client-side)
+    
     const PAGE_SIZE = 15;
     let rows = [];
     let filtered = [];
@@ -197,7 +197,7 @@
       }
     }
 
-    // Sort po kliku na header
+    
     document.querySelectorAll('#tbl thead th').forEach(th => {
       th.addEventListener('click', () => {
         const key = th.dataset.key;
@@ -212,7 +212,7 @@
       });
     });
 
-    // Pretraga i kontrole
+    
     $('#q').addEventListener('input', applyFilter);
     $('#clear').addEventListener('click', () => { $('#q').value=''; applyFilter(); });
     $('#prev').addEventListener('click', () => { if (page>1){ page--; render(); }});
