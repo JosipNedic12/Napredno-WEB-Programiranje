@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Diplomski radovi</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121933;
+      --muted: #8aa0c7;
+      --fg: #e9eefc;
+      --accent: #5fb0ff;
+      --accent-2: #72d2a7;
+      --danger: #ff6b6b;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    html,body { margin:0; background:var(--bg); color:var(--fg); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 22px; margin: 0 0 12px; }
+    .toolbar { display:flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .input {
+      display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid #253055; border-radius:8px; padding:8px 10px; min-width: 220px; flex: 1 1 260px;
+    }
+    .input input {
+      background: transparent; border:0; color:var(--fg); width:100%; outline: none;
+    }
+    .btn {
+      background: linear-gradient(180deg, #1b2a55, #142046);
+      color: var(--fg);
+      border: 1px solid #26315a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--card);
+      border: 1px solid #26315a;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table th, .table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1d2747;
+      vertical-align: top;
+    }
+    .table th {
+      position: sticky; top: 0;
+      background: #0f1631;
+      text-align: left;
+      font-weight: 600;
+      color: var(--muted);
+      z-index: 1;
+      user-select: none;
+      cursor: pointer;
+    }
+    .table tr:hover td { background: #0f1734; }
+    .mono { font-family: var(--mono); color: #b7c7ec; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#1a2b52; border:1px solid #2a3a66; color:#cfe3ff; font-size:12px; }
+    .link { color: var(--accent); text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+    .muted { color: var(--muted); }
+    .nowrap { white-space: nowrap; }
+    .truncate {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .footer {
+      display:flex; justify-content: space-between; align-items:center; gap:10px;
+      color: var(--muted); padding: 8px 2px; font-size: 12px;
+    }
+    .pager { display:flex; gap:6px; }
+    .pager .btn { padding:6px 10px; }
+    @media (max-width: 720px) {
+      .hide-sm { display: none; }
+      .truncate { -webkit-line-clamp: 3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Diplomski radovi</h1>
+
+    <div class="toolbar">
+      <div class="input"><input id="q" placeholder="Pretraži po nazivu, OIB-u, linku..." /></div>
+      <button class="btn" id="clear">Očisti</button>
+      <span class="muted" id="count">Učitavanje...</span>
+    </div>
+
+    <table class="table" id="tbl">
+      <thead>
+        <tr>
+          <th data-key="id">ID ▲▼</th>
+          <th data-key="naziv_rada">Naziv</th>
+          <th class="hide-sm" data-key="tekst_rada">Opis</th>
+          <th data-key="oib_tvrtke">OIB</th>
+          <th data-key="link_rada">Link</th>
+          <th class="hide-sm nowrap" data-key="created_at">Kreirano</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="footer">
+      <div id="status">Spremno.</div>
+      <div class="pager">
+        <button class="btn" id="prev">⟨</button>
+        <span class="muted" id="pageinfo">1/1</span>
+        <button class="btn" id="next">⟩</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    const ENDPOINT = new URL('index.php?run=1', location.href).toString();
+
+    // Paging u browseru (client-side)
+    const PAGE_SIZE = 15;
+    let rows = [];
+    let filtered = [];
+    let sortKey = 'created_at';
+    let sortDir = 'desc';
+    let page = 1;
+
+    const $ = sel => document.querySelector(sel);
+    const TBody = $('#tbl tbody');
+    const Count = $('#count');
+    const Status = $('#status');
+    const PageInfo = $('#pageinfo');
+
+    function cmp(a,b,key){
+      const av = a[key] ?? '';
+      const bv = b[key] ?? '';
+      if (key === 'id') return Number(av) - Number(bv);
+      return String(av).localeCompare(String(bv), 'hr', { numeric:true, sensitivity:'base' });
+    }
+
+    function render(){
+      const start = (page-1)*PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const slice = filtered.slice(start, end);
+
+      TBody.innerHTML = slice.map(r => {
+        const link = r.link_rada ? `<a class="link" target="_blank" rel="noopener" href="${r.link_rada}">otvori</a>` : '';
+        const opis = r.tekst_rada ? escapeHtml(r.tekst_rada) : '';
+        const naziv = r.naziv_rada ? escapeHtml(r.naziv_rada) : '';
+        const oib = r.oib_tvrtke ? `<span class="pill mono">${r.oib_tvrtke}</span>` : '<span class="muted">—</span>';
+        const created = r.created_at ? new Date(r.created_at).toLocaleString('hr-HR') : '';
+        return `
+          <tr>
+            <td class="mono nowrap">${r.id ?? ''}</td>
+            <td>${naziv}</td>
+            <td class="hide-sm"><div class="truncate">${opis}</div></td>
+            <td>${oib}</td>
+            <td class="nowrap">${link}</td>
+            <td class="hide-sm nowrap">${created}</td>
+          </tr>`;
+      }).join('');
+
+      const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      PageInfo.textContent = `${page}/${pages}`;
+      Count.textContent = `${filtered.length} stavki`;
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    }
+
+    function applyFilter(){
+      const q = $('#q').value.trim().toLowerCase();
+      filtered = !q ? rows.slice() : rows.filter(r => {
+        return ['naziv_rada','oib_tvrtke','link_rada','tekst_rada'].some(k => (r[k] || '').toString().toLowerCase().includes(q));
+      });
+      filtered.sort((a,b) => (sortDir==='asc'?1:-1) * cmp(a,b,sortKey));
+      page = 1;
+      render();
+    }
+
+    async function load(){
+      Status.textContent = 'Učitavanje...';
+      try{
+        const res = await fetch(ENDPOINT, { headers: { 'Accept':'application/json' }});
+        const data = await res.json();
+        rows = (data.rows_in_db || data || []).map(x => x);
+        filtered = rows.slice();
+        applyFilter();
+        Status.textContent = 'Gotovo.';
+      }catch(e){
+        Status.textContent = 'Greška pri učitavanju: ' + e.message;
+      }
+    }
+
+    // Sort po kliku na header
+    document.querySelectorAll('#tbl thead th').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        if (!key) return;
+        if (sortKey === key) {
+          sortDir = (sortDir === 'asc') ? 'desc' : 'asc';
+        } else {
+          sortKey = key;
+          sortDir = (key === 'id' || key === 'created_at') ? 'desc' : 'asc';
+        }
+        applyFilter();
+      });
+    });
+
+    // Pretraga i kontrole
+    $('#q').addEventListener('input', applyFilter);
+    $('#clear').addEventListener('click', () => { $('#q').value=''; applyFilter(); });
+    $('#prev').addEventListener('click', () => { if (page>1){ page--; render(); }});
+    $('#next').addEventListener('click', () => {
+      const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      if (page<pages){ page++; render(); }
+    });
+
+    load();
+  </script>
+</body>
+</html>
