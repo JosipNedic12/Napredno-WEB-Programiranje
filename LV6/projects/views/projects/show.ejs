@@ -1,0 +1,38 @@
+<h1><%= project.naziv %></h1>
+
+<p><b>Opis:</b> <%= project.opis %></p>
+<p><b>Cijena:</b> <%= project.cijena %></p>
+<p><b>Obavljeni poslovi:</b> <%= project.obavljeniPoslovi %></p>
+<p><b>Datum početka:</b> <%= project.datumPocetka ? project.datumPocetka.toISOString().slice(0,10) : '' %></p>
+<p><b>Datum završetka:</b> <%= project.datumZavrsetka ? project.datumZavrsetka.toISOString().slice(0,10) : '' %></p>
+
+<hr/>
+<h2>Članovi tima</h2>
+
+<ul>
+  <% project.clanoviTima.forEach(m => { %>
+    <li>
+      <%= m.name %> (<%= m.role %>) <%= m.email %>
+      <form method="post" action="/projects/<%= project._id %>/team/<%= m._id %>/delete" style="display:inline">
+        <button type="submit">Delete member</button>
+      </form>
+    </li>
+  <% }) %>
+</ul>
+
+<h3>Dodaj člana</h3>
+<form method="post" action="/projects/<%= project._id %>/team">
+  <div>Ime: <input name="name" required /></div>
+  <div>Uloga: <input name="role" /></div>
+  <div>Email: <input name="email" type="email" /></div>
+  <button type="submit">Add</button>
+</form>
+
+<hr/>
+<a href="/projects/<%= project._id %>/edit">Edit</a>
+
+<form method="post" action="/projects/<%= project._id %>/delete" style="display:inline">
+  <button type="submit">Delete project</button>
+</form>
+
+<br/><a href="/projects">Back</a>

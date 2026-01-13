@@ -1,0 +1,11 @@
+<h1>Projects</h1>
+<a href="/projects/new">+ New project</a>
+
+<ul>
+  <% projects.forEach(p => { %>
+    <li>
+      <a href="/projects/<%= p._id %>"><%= p.naziv %></a>
+      (cijena: <%= p.cijena %>)
+    </li>
+  <% }) %>
+</ul>
