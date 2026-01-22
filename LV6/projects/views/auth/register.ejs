@@ -1,0 +1,10 @@
+<%- include('../partials/topbar') %>
+
+<h1>Register</h1>
+<form method="post" action="/auth/register">
+  <div>Username: <input name="username" required /></div>
+  <div>Email: <input name="email" type="email" required /></div>
+  <div>Password: <input name="password" type="password" required /></div>
+  <button type="submit">Register</button>
+</form>
+<a href="/auth/login">Login</a>

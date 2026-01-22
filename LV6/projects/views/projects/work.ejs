@@ -1,0 +1,13 @@
+<%- include('../partials/topbar') %>
+
+<h1>Update work: <%= project.naziv %></h1>
+
+<form method="post" action="/projects/<%= project._id %>/work">
+  <div>
+    Obavljeni poslovi:
+    <textarea name="obavljeniPoslovi" rows="6"><%= project.obavljeniPoslovi %></textarea>
+  </div>
+  <button type="submit">Save</button>
+</form>
+
+<a href="/projects/<%= project._id %>">Back</a>

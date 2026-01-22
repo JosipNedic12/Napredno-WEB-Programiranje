@@ -1,3 +1,5 @@
+<%- include('../partials/topbar') %>
+
 <h1>Edit project</h1>
 
 <form method="post" action="/projects/<%= project._id %>">
@@ -7,6 +9,12 @@
   <div>Obavljeni poslovi: <textarea name="obavljeniPoslovi"><%= project.obavljeniPoslovi %></textarea></div>
   <div>Datum početka: <input name="datumPocetka" type="date" value="<%= project.datumPocetka ? project.datumPocetka.toISOString().slice(0,10) : '' %>" /></div>
   <div>Datum završetka: <input name="datumZavrsetka" type="date" value="<%= project.datumZavrsetka ? project.datumZavrsetka.toISOString().slice(0,10) : '' %>" /></div>
+
+  <div>
+    Archived:
+    <input name="archived" type="checkbox" <%= project.archived ? 'checked' : '' %> />
+  </div>
+
   <button type="submit">Save</button>
 </form>
 

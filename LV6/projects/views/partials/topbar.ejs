@@ -1,0 +1,14 @@
+<div style="display:flex; justify-content:flex-end; gap:10px; padding:10px; border-bottom:1px solid #ddd;">
+  <% if (currentUser) { %>
+    <a href="/projects/archive">Archive</a>
+    <a href="/projects/leader">Leader</a> |
+    <a href="/projects/member">Member</a>
+    Logged in as <b><%= currentUser.username %></b>
+    <form method="post" action="/auth/logout" style="display:inline;">
+      <button type="submit">Logout</button>
+    </form>
+  <% } else { %>
+    <a href="/auth/login">Login</a> |
+    <a href="/auth/register">Register</a>
+  <% } %>
+</div>

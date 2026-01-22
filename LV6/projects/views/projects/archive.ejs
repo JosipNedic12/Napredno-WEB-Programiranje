@@ -1,0 +1,16 @@
+<%- include('../partials/topbar') %>
+
+<h1><%= title || 'Archive' %></h1>
+
+<% if (!projects.length) { %>
+  <p>No archived projects.</p>
+<% } else { %>
+  <ul>
+    <% projects.forEach(p => { %>
+      <li>
+        <a href="/projects/<%= p._id %>"><%= p.naziv %></a>
+        (cijena: <%= p.cijena %>)
+      </li>
+    <% }) %>
+  </ul>
+<% } %>

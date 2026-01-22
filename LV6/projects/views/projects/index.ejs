@@ -1,5 +1,9 @@
-<h1>Projects</h1>
-<a href="/projects/new">+ New project</a>
+<%- include('../partials/topbar') %>
+<h1><%= typeof title !== 'undefined' ? title : 'Projects' %></h1>
+<% if (canCreate) { %>
+  <a href="/projects/new">+ New project</a>
+<% } %>
+
 
 <ul>
   <% projects.forEach(p => { %>

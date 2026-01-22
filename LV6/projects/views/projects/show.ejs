@@ -1,3 +1,5 @@
+<%- include('../partials/topbar') %>
+
 <h1><%= project.naziv %></h1>
 
 <p><b>Opis:</b> <%= project.opis %></p>
@@ -6,33 +8,44 @@
 <p><b>Datum početka:</b> <%= project.datumPocetka ? project.datumPocetka.toISOString().slice(0,10) : '' %></p>
 <p><b>Datum završetka:</b> <%= project.datumZavrsetka ? project.datumZavrsetka.toISOString().slice(0,10) : '' %></p>
 
+<% if (role === 'member') { %>
+  <p>
+    <a href="/projects/<%= project._id %>/work">Update work (obavljeniPoslovi)</a>
+  </p>
+<% } %>
+
 <hr/>
+
 <h2>Članovi tima</h2>
 
 <ul>
-  <% project.clanoviTima.forEach(m => { %>
-    <li>
-      <%= m.name %> (<%= m.role %>) <%= m.email %>
-      <form method="post" action="/projects/<%= project._id %>/team/<%= m._id %>/delete" style="display:inline">
-        <button type="submit">Delete member</button>
-      </form>
-    </li>
+  <% project.clanoviTima.forEach(u => { %>
+    <li><%= u.username %> - <%= u.email %></li>
   <% }) %>
 </ul>
 
-<h3>Dodaj člana</h3>
-<form method="post" action="/projects/<%= project._id %>/team">
-  <div>Ime: <input name="name" required /></div>
-  <div>Uloga: <input name="role" /></div>
-  <div>Email: <input name="email" type="email" /></div>
-  <button type="submit">Add</button>
-</form>
+<% if (role === 'leader') { %>
+  <hr/>
+
+  <h3>Dodaj člana (iz baze)</h3>
+  <form method="post" action="/projects/<%= project._id %>/team">
+    <select name="memberId" required>
+      <option value="">-- odaberi korisnika --</option>
+      <% users.forEach(u => { %>
+         <option value="<%= u._id %>"><%= u.username %> (<%= u.email %>)</option>
+      <% }) %>
+    </select>
+    <button type="submit">Add</button>
+  </form>
+
+  <p>
+    <a href="/projects/<%= project._id %>/edit">Edit project</a>
+  </p>
+
+  <form method="post" action="/projects/<%= project._id %>/delete" style="display:inline">
+    <button type="submit">Delete project</button>
+  </form>
+<% } %>
 
 <hr/>
-<a href="/projects/<%= project._id %>/edit">Edit</a>
-
-<form method="post" action="/projects/<%= project._id %>/delete" style="display:inline">
-  <button type="submit">Delete project</button>
-</form>
-
-<br/><a href="/projects">Back</a>
+<a href="/projects">Back</a>

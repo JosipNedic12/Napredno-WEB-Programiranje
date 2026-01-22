@@ -8,13 +8,15 @@ const TeamMemberSchema = new mongoose.Schema({
 }, { _id: true });
 
 const ProjectSchema = new mongoose.Schema({
-  naziv: { type: String, required: true },            // naziv projekta
-  opis: { type: String, default: '' },                // opis projekta
-  cijena: { type: Number, default: 0 },               // cijena projekta
-  obavljeniPoslovi: { type: String, default: '' },    // obavljeni poslovi
-  datumPocetka: { type: Date },                       // datum početka
-  datumZavrsetka: { type: Date },                     // datum završetka
-  clanoviTima: { type: [TeamMemberSchema], default: [] } // više članova tima
+  naziv: { type: String, required: true },            
+  opis: { type: String, default: '' },                
+  cijena: { type: Number, default: 0 },               
+  obavljeniPoslovi: { type: String, default: '' },    
+  datumPocetka: { type: Date },                       
+  datumZavrsetka: { type: Date },                     
+  voditelj: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  clanoviTima: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  archived: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Project', ProjectSchema);
